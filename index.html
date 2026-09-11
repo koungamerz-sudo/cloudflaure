@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="6a97888e-site-verification" content="d0aeec32b9621ca214698b94c8e5a654">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Develop — Photo Enhancer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#17140F;
+    --bg-panel:#211D17;
+    --bg-well:#1C1811;
+    --paper:#EDE6D6;
+    --rust:#B34700;
+    --rust-bright:#D65A0E;
+    --gold:#C9A227;
+    --line:#3A342A;
+    --text-muted:#9C9280;
+    --text-dim:#6B6558;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg-deep);
+    color:var(--paper);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  h1,h2,.display{
+    font-family:'Oswald', sans-serif;
+    font-weight:600;
+    letter-spacing:0.01em;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding:28px 40px 20px;
+    border-bottom:1px solid var(--line);
+  }
+  header h1{
+    font-size:26px;
+    margin:0;
+    color:var(--paper);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  header h1 span{ color:var(--rust-bright); }
+  header p{
+    margin:0;
+    font-size:13px;
+    color:var(--text-muted);
+    max-width:260px;
+    text-align:right;
+    line-height:1.5;
+  }
+
+  /* ---------- Layout ---------- */
+  main{
+    flex:1;
+    display:grid;
+    grid-template-columns:280px 1fr;
+    gap:0;
+  }
+  @media (max-width:820px){
+    main{ grid-template-columns:1fr; }
+  }
+
+  /* ---------- Controls panel ---------- */
+  aside{
+    border-right:1px solid var(--line);
+    padding:28px 26px 40px;
+    background:var(--bg-panel);
+    display:flex;
+    flex-direction:column;
+    gap:26px;
+  }
+  .field{ display:flex; flex-direction:column; gap:8px; }
+  .field-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-size:13px;
+  }
+  .field-row label{ color:var(--paper); }
+  .field-row output{ color:var(--rust-bright); font-variant-numeric:tabular-nums; }
+
+  input[type=range]{
+    -webkit-appearance:none;
+    width:100%;
+    height:2px;
+    background:var(--line);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:13px; height:13px;
+    border-radius:50%;
+    background:var(--gold);
+    cursor:pointer;
+    margin-top:-6px;
+    border:2px solid var(--bg-panel);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:13px; height:13px;
+    border-radius:50%;
+    background:var(--gold);
+    cursor:pointer;
+    border:2px solid var(--bg-panel);
+  }
+  input[type=range]::-moz-range-track{ height:2px; background:var(--line); }
+
+  fieldset{
+    border:none;
+    padding:0;
+    margin:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  fieldset legend{
+    font-size:13px;
+    color:var(--paper);
+    padding:0 0 10px;
+  }
+  .radio-row{ display:flex; gap:8px; }
+  .radio-row label{
+    flex:1;
+    text-align:center;
+    font-size:12px;
+    padding:8px 0;
+    border:1px solid var(--line);
+    color:var(--text-muted);
+    cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  .radio-row input{ display:none; }
+  .radio-row input:checked + label{
+    border-color:var(--rust-bright);
+    color:var(--paper);
+  }
+
+  .btn{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:13px;
+    font-weight:500;
+    padding:12px 16px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--paper);
+    cursor:pointer;
+    text-align:left;
+    transition:border-color .15s, background .15s;
+  }
+  .btn:hover{ border-color:var(--text-muted); }
+  .btn-primary{
+    background:var(--rust);
+    border-color:var(--rust);
+    color:var(--paper);
+    text-align:center;
+    font-weight:600;
+  }
+  .btn-primary:hover{ background:var(--rust-bright); border-color:var(--rust-bright); }
+  .btn-primary:disabled{
+    background:var(--bg-well);
+    border-color:var(--line);
+    color:var(--text-dim);
+    cursor:not-allowed;
+  }
+
+  .stack{ display:flex; flex-direction:column; gap:10px; margin-top:auto; padding-top:20px; border-top:1px solid var(--line); }
+  #fileInput{ display:none; }
+
+  /* ---------- Stage ---------- */
+  section.stage{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+    background:
+      repeating-conic-gradient(var(--bg-well) 0% 25%, var(--bg-deep) 0% 50%) 50% / 24px 24px;
+    min-height:520px;
+    overflow:hidden;
+  }
+
+  .dropzone{
+    width:100%;
+    max-width:520px;
+    border:1px dashed var(--line);
+    padding:60px 30px;
+    text-align:center;
+    cursor:pointer;
+    color:var(--text-muted);
+  }
+  .dropzone:hover{ border-color:var(--rust-bright); }
+  .dropzone .drop-title{
+    font-family:'Oswald', sans-serif;
+    font-size:20px;
+    color:var(--paper);
+    margin-bottom:8px;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  .dropzone .drop-sub{ font-size:13px; }
+
+  .compare{
+    position:relative;
+    max-width:100%;
+    max-height:80vh;
+    display:none;
+    line-height:0;
+    box-shadow:0 0 0 1px var(--line);
+  }
+  .compare canvas{ display:block; max-width:100%; max-height:80vh; width:auto; height:auto; }
+  .compare .before-layer{
+    position:absolute;
+    top:0; left:0;
+    height:100%;
+    overflow:hidden;
+    clip-path:inset(0 50% 0 0);
+  }
+  .compare .before-layer img{
+    display:block;
+    height:100%;
+    width:auto;
+    max-width:none;
+  }
+  .compare .divider{
+    position:absolute;
+    top:0; bottom:0;
+    left:50%;
+    width:1px;
+    background:var(--paper);
+    pointer-events:none;
+  }
+  .compare .handle{
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:34px; height:34px;
+    margin:-17px 0 0 -17px;
+    border-radius:50%;
+    background:var(--paper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    color:var(--bg-deep);
+    pointer-events:none;
+  }
+  .compare-slider{
+    position:absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    -webkit-appearance:none;
+    appearance:none;
+    background:transparent;
+    margin:0;
+    cursor:ew-resize;
+  }
+  .compare-slider::-webkit-slider-thumb{ opacity:0; width:34px; height:34px; -webkit-appearance:none; }
+  .compare-slider::-moz-range-thumb{ opacity:0; width:34px; height:34px; border:none; }
+  .compare-slider::-webkit-slider-runnable-track{ background:transparent; }
+
+  .tag{
+    position:absolute;
+    top:12px;
+    font-size:11px;
+    letter-spacing:0.05em;
+    color:var(--text-muted);
+    background:rgba(23,20,15,0.7);
+    padding:4px 8px;
+  }
+  .tag.before{ left:12px; }
+  .tag.after{ right:12px; }
+
+  footer{
+    padding:16px 40px;
+    border-top:1px solid var(--line);
+    font-size:12px;
+    color:var(--text-dim);
+    display:flex;
+    justify-content:space-between;
+  }
+</style>
+</head>
+<body>
+
+<!-- Popunder ad -->
+<script src="https://pl31183516.profitableratecpmnetwork.com/00/07/0c/00070c2566d7a9ecf653b44a39704a2d.js"></script>
+
+<!-- Other ad -->
+<script async="async" data-cfasync="false" src="https://pl31183517.profitableratecpmnetwork.com/24411a39027b9a784c466fcf3cd589b7/invoke.js"></script>
+<div id="container-24411a39027b9a784c466fcf3cd589b7"></div>
+
+<!-- Social bar -->
+<script src="https://pl31183519.profitableratecpmnetwork.com/87/9f/e5/879fe53dcd87d2e45f51cad0b26f7d4e.js"></script>
+
+<!-- Banner -->
+<script>
+  atOptions = {
+    'key' : '1661b035ddd3d33e1fb1cb4fbe05d687',
+    'format' : 'iframe',
+    'height' : 300,
+    'width' : 160,
+    'params' : {}
+  };
+</script>
+<script src="https://www.highrevenueformat.com/1661b035ddd3d33e1fb1cb4fbe05d687/invoke.js"></script>
+
+
+<header>
+  <h1>Develop<span>.</span></h1>
+  <p>A darkroom for your photos. Adjust, sharpen and enlarge them entirely in your browser — nothing is uploaded anywhere.</p>
+</header>
+
+<main>
+  <aside>
+    <button class="btn btn-primary" id="chooseBtn">Choose a photo</button>
+    <input type="file" id="fileInput" accept="image/*">
+
+    <div class="field">
+      <div class="field-row"><label for="brightness">Brightness</label><output id="brightnessVal">0</output></div>
+      <input type="range" id="brightness" min="-100" max="100" value="0">
+    </div>
+
+    <div class="field">
+      <div class="field-row"><label for="contrast">Contrast</label><output id="contrastVal">0</output></div>
+      <input type="range" id="contrast" min="-100" max="100" value="0">
+    </div>
+
+    <div class="field">
+      <div class="field-row"><label for="saturation">Saturation</label><output id="saturationVal">0</output></div>
+      <input type="range" id="saturation" min="-100" max="100" value="0">
+    </div>
+
+    <div class="field">
+      <div class="field-row"><label for="sharpen">Sharpen</label><output id="sharpenVal">0</output></div>
+      <input type="range" id="sharpen" min="0" max="100" value="0">
+    </div>
+
+    <fieldset>
+      <legend>Enlarge</legend>
+      <div class="radio-row">
+        <input type="radio" name="scale" id="scale1" value="1" checked><label for="scale1">1×</label>
+        <input type="radio" name="scale" id="scale2" value="2"><label for="scale2">2×</label>
+        <input type="radio" name="scale" id="scale4" value="4"><label for="scale4">4×</label>
+      </div>
+    </fieldset>
+
+    <div class="stack">
+      <button class="btn" id="autoBtn" disabled>Auto enhance</button>
+      <button class="btn" id="resetBtn" disabled>Reset adjustments</button>
+      <button class="btn btn-primary" id="downloadBtn" disabled>Download result</button>
+    </div>
+  </aside>
+
+  <section class="stage">
+    <div class="dropzone" id="dropzone">
+      <div class="drop-title">Drop a photo here</div>
+      <div class="drop-sub">or click to browse — JPG, PNG or WebP</div>
+    </div>
+
+    <div class="compare" id="compare">
+      <span class="tag before">Before</span>
+      <span class="tag after">After</span>
+      <canvas id="canvas"></canvas>
+      <div class="before-layer" id="beforeLayer"><img id="beforeImg" alt="Original"></div>
+      <div class="divider" id="divider"></div>
+      <div class="handle">↔</div>
+      <input type="range" class="compare-slider" id="compareSlider" min="0" max="100" value="50">
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Runs fully client-side — safe on static hosting.</span>
+  <span id="dims"></span>
+  <a href="https://www.profitableratecpmnetwork.com/ibrauqzzf?key=c24a25cb3ec362cf2434df9132bd6030" target="_blank" rel="nofollow noopener" style="color:var(--text-dim);">Sponsored</a>
+</footer>
+
+<script>
+(function(){
+  const fileInput = document.getElementById('fileInput');
+  const chooseBtn = document.getElementById('chooseBtn');
+  const dropzone = document.getElementById('dropzone');
+  const compareEl = document.getElementById('compare');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const beforeImg = document.getElementById('beforeImg');
+  const beforeLayer = document.getElementById('beforeLayer');
+  const divider = document.getElementById('divider');
+  const compareSlider = document.getElementById('compareSlider');
+  const dimsLabel = document.getElementById('dims');
+
+  const sliders = {
+    brightness: document.getElementById('brightness'),
+    contrast: document.getElementById('contrast'),
+    saturation: document.getElementById('saturation'),
+    sharpen: document.getElementById('sharpen'),
+  };
+  const outputs = {
+    brightness: document.getElementById('brightnessVal'),
+    contrast: document.getElementById('contrastVal'),
+    saturation: document.getElementById('saturationVal'),
+    sharpen: document.getElementById('sharpenVal'),
+  };
+
+  const autoBtn = document.getElementById('autoBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  // Offscreen canvas holding the ORIGINAL image at its native size — every
+  // render starts from this so repeated adjustments never compound/degrade.
+  const srcCanvas = document.createElement('canvas');
+  const srcCtx = srcCanvas.getContext('2d');
+  let srcLoaded = false;
+  let renderQueued = false;
+
+  function currentScale(){
+    return parseInt(document.querySelector('input[name=scale]:checked').value, 10);
+  }
+
+  chooseBtn.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.style.borderColor = 'var(--rust-bright)'; });
+  dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'var(--line)'; });
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.style.borderColor = 'var(--line)';
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files && e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  function loadFile(file){
+    if (!file.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      srcCanvas.width = img.naturalWidth;
+      srcCanvas.height = img.naturalHeight;
+      srcCtx.drawImage(img, 0, 0);
+      srcLoaded = true;
+
+      beforeImg.src = url;
+      dropzone.style.display = 'none';
+      compareEl.style.display = 'inline-block';
+
+      [autoBtn, resetBtn, downloadBtn].forEach(b => b.disabled = false);
+      resetSliders();
+      dimsLabel.textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px original';
+      queueRender();
+    };
+    img.src = url;
+  }
+
+  function resetSliders(){
+    sliders.brightness.value = 0;
+    sliders.contrast.value = 0;
+    sliders.saturation.value = 0;
+    sliders.sharpen.value = 0;
+    document.getElementById('scale1').checked = true;
+    syncOutputs();
+  }
+
+  function syncOutputs(){
+    outputs.brightness.textContent = sliders.brightness.value;
+    outputs.contrast.textContent = sliders.contrast.value;
+    outputs.saturation.textContent = sliders.saturation.value;
+    outputs.sharpen.textContent = sliders.sharpen.value;
+  }
+
+  Object.values(sliders).forEach(s => s.addEventListener('input', () => { syncOutputs(); queueRender(); }));
+  document.querySelectorAll('input[name=scale]').forEach(r => r.addEventListener('change', queueRender));
+  resetBtn.addEventListener('click', () => { resetSliders(); queueRender(); });
+
+  autoBtn.addEventListener('click', () => {
+    // Simple auto-levels: sample the source, find the 1st/99th percentile
+    // luminance and stretch contrast/brightness to fill that range.
+    const w = srcCanvas.width, h = srcCanvas.height;
+    const data = srcCtx.getImageData(0, 0, w, h).data;
+    let min = 255, max = 0;
+    for (let i = 0; i < data.length; i += 40) {
+      const l = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+      if (l < min) min = l;
+      if (l > max) max = l;
+    }
+    const range = Math.max(max - min, 1);
+    const contrastBoost = Math.min(60, Math.round((255 - range) / 255 * 120));
+    const brightnessBoost = Math.round((128 - (min + max) / 2) / 128 * 40);
+    sliders.contrast.value = contrastBoost;
+    sliders.brightness.value = Math.max(-60, Math.min(60, brightnessBoost));
+    sliders.saturation.value = 15;
+    syncOutputs();
+    queueRender();
+  });
+
+  function queueRender(){
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => { renderQueued = false; render(); });
+  }
+
+  function render(){
+    if (!srcLoaded) return;
+    const scale = currentScale();
+    const targetW = srcCanvas.width * scale;
+    const targetH = srcCanvas.height * scale;
+
+    // Step-doubling upscale: repeatedly doubling size with high-quality
+    // smoothing gives noticeably cleaner edges than one big jump.
+    let workCanvas = srcCanvas;
+    if (scale > 1) {
+      let curW = srcCanvas.width, curH = srcCanvas.height;
+      let stepCanvas = srcCanvas;
+      while (curW < targetW) {
+        const nextW = Math.min(curW * 2, targetW);
+        const nextH = Math.min(curH * 2, targetH);
+        const step = document.createElement('canvas');
+        step.width = nextW; step.height = nextH;
+        const sctx = step.getContext('2d');
+        sctx.imageSmoothingEnabled = true;
+        sctx.imageSmoothingQuality = 'high';
+        sctx.drawImage(stepCanvas, 0, 0, nextW, nextH);
+        stepCanvas = step;
+        curW = nextW; curH = nextH;
+      }
+      workCanvas = stepCanvas;
+    }
+
+    canvas.width = workCanvas.width;
+    canvas.height = workCanvas.height;
+    ctx.drawImage(workCanvas, 0, 0);
+
+    const brightness = parseInt(sliders.brightness.value, 10);
+    const contrast = parseInt(sliders.contrast.value, 10);
+    const saturation = parseInt(sliders.saturation.value, 10);
+    const sharpen = parseInt(sliders.sharpen.value, 10);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    applyColorAdjustments(imageData, brightness, contrast, saturation);
+    if (sharpen > 0) applySharpen(imageData, sharpen / 100);
+    ctx.putImageData(imageData, 0, 0);
+
+    // Keep the "before" layer sized to match the after canvas so the
+    // drag-compare divider lines up pixel-for-pixel.
+    beforeImg.style.height = canvas.clientHeight + 'px';
+    beforeLayer.style.width = canvas.clientWidth + 'px';
+  }
+
+  function applyColorAdjustments(imageData, brightness, contrast, saturation){
+    const data = imageData.data;
+    const c = (contrast / 100) + 1;              // 0..2
+    const cOffset = 128 * (1 - c);
+    const s = (saturation / 100) + 1;             // 0..2
+    const b = brightness * 1.4;
+
+    for (let i = 0; i < data.length; i += 4) {
+      let r = data[i], g = data[i+1], bl = data[i+2];
+
+      // brightness
+      r += b; g += b; bl += b;
+      // contrast
+      r = r * c + cOffset;
+      g = g * c + cOffset;
+      bl = bl * c + cOffset;
+      // saturation (mix toward luminance)
+      const gray = 0.299*r + 0.587*g + 0.114*bl;
+      r = gray + (r - gray) * s;
+      g = gray + (g - gray) * s;
+      bl = gray + (bl - gray) * s;
+
+      data[i]   = clamp(r);
+      data[i+1] = clamp(g);
+      data[i+2] = clamp(bl);
+    }
+  }
+
+  function clamp(v){ return v < 0 ? 0 : v > 255 ? 255 : v; }
+
+  function applySharpen(imageData, amount){
+    const w = imageData.width, h = imageData.height;
+    const src = imageData.data;
+    const out = new Uint8ClampedArray(src);
+    const centerWeight = 1 + 4 * amount;
+    const edgeWeight = -amount;
+
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = (y * w + x) * 4;
+        for (let ch = 0; ch < 3; ch++) {
+          const up    = src[idx - w*4 + ch];
+          const down  = src[idx + w*4 + ch];
+          const left  = src[idx - 4 + ch];
+          const right = src[idx + 4 + ch];
+          const center= src[idx + ch];
+          const value = center * centerWeight + (up + down + left + right) * edgeWeight;
+          out[idx + ch] = clamp(value);
+        }
+      }
+    }
+    imageData.data.set(out);
+  }
+
+  compareSlider.addEventListener('input', () => {
+    const pct = compareSlider.value;
+    beforeLayer.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+    divider.style.left = pct + '%';
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'enhanced-photo.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  // --- Popunder: fires once on the visitor's first click anywhere on the
+  // page. Browsers block window.open() calls that aren't tied to a direct
+  // user gesture, so this listens for that first click rather than trying
+  // to open on page load (which would silently fail almost everywhere).
+  (function initPopunder(){
+    const DIRECT_LINK = 'https://www.profitableratecpmnetwork.com/ibrauqzzf?key=c24a25cb3ec362cf2434df9132bd6030';
+    const SESSION_KEY = 'popunderShown';
+
+    if (sessionStorage.getItem(SESSION_KEY)) return;
+
+    function handleFirstClick(){
+      const win = window.open(DIRECT_LINK, '_blank');
+      if (win) win.blur();
+      window.focus();
+      sessionStorage.setItem(SESSION_KEY, '1');
+      document.removeEventListener('click', handleFirstClick);
+    }
+
+    document.addEventListener('click', handleFirstClick);
+  })();
+})();
+</script>
+
+</body>
+</html>
